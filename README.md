@@ -1,97 +1,51 @@
-# auctionProyect Smart Contract
+# Auction Project Smart Contract
 
-Este contrato inteligente implementa una subasta segura y dinámica en Solidity. Incluye funcionalidades como ofertas crecientes, reintegros, extensión de tiempo automático, reembolsos parciales, finalización manual y devolución de depósitos con comisión.
+This smart contract implements a secure and dynamic auction system in Solidity. It supports incrementally increasing bids, automatic refunds for non-winning bidders, partial refunds during the auction, and an emergency fund recovery mechanism.
 
----
+## Deployment
 
-## Despliegue
+1. Copy the content of `Auction.sol` into [Remix IDE](https://remix.ethereum.org).
+2. Compile using Solidity version `^0.8.0`.
+3. Deploy with **no constructor parameters**.
+4. The auction lasts **7 days** from deployment and automatically extends by **10 minutes** if a valid bid is placed near the end.
 
-1. Copiar el contrato a [Remix IDE](https://remix.ethereum.org).
-2. Seleccionar compilador `Solidity 0.8.x`.
-3. Compilar y desplegar usando una red VM.
-4. Interactuar con las funciones del contrato desde la interfaz de Remix.
+## Interaction
 
----
+- Call `bid()` to place a bid. The new bid must be at least **5% higher** than the previous one.
+- The auction tracks the current winner based on the latest valid bid.
+- Once finalized, non-winning bidders are automatically refunded **98%** of their total deposits.
+- Partial refunds for past bids (excluding the latest one) are available via `partialRefund()` during the auction.
 
-## Funcionalidades
+## Main Functions
 
-### `constructor()`
+| Function              | Description                                                                 |
+|-----------------------|-----------------------------------------------------------------------------|
+| `bid()`               | Places a new bid. Must send ETH and meet the 5% increment rule.            |
+| `showWinner()`        | Returns the address and amount of the current winning bid.                 |
+| `showAllBids()`       | Returns the full list of all placed bids.                                  |
+| `finalizeAuction()`   | Finalizes the auction. Refunds all non-winners (only callable by the owner).|
+| `partialRefund()`     | Allows users to retrieve funds from older bids, excluding the last one.    |
+| `emergencyWithdraw()` | Allows the owner to withdraw all contract funds in case of emergency.      |
 
-- Inicializa la subasta con una duración de 14 días.
-- Establece el tiempo de inicio (`startTime`) y fin (`stopTime`).
+## Events
 
----
+- `NewBid(address bidder, uint256 amount)`
+- `AuctionFinalized(address winner, uint256 amount)`
+- `RefundIssued(address bidder, uint256 amount)`
+- `PartialRefund(address bidder, uint256 amount)`
 
-### `function bid() external payable`
+## Refunds
 
-Permite realizar una oferta durante la subasta.
+- **Automatic**: After `finalizeAuction()` is called, non-winners receive 98% of their total deposited ETH.
+- **Manual (Partial)**: Bidders may call `partialRefund()` during the auction to withdraw excess ETH from past bids.
 
-- La oferta debe ser al menos un 5% mayor a la oferta actual.
-- Registra la oferta válida más reciente por usuario.
-- Extiende la subasta 10 minutos si la oferta se realiza dentro de los últimos 10 minutos.
-- Emite el evento `NewOffer`.
+## Notes
 
----
+- All critical functions are protected using access control (`onlyOwner`, `onlyBeforeEnd`, etc.).
+- The `emergencyWithdraw()` function is intended only for recovery if funds are stuck. For practical purposes, it does not check if the auction has ended.
+- ETH is received directly through the `receive()` function.
 
-### `function showWinner() external view returns (address, uint256)`
+## Author
 
-Devuelve el ganador actual (dirección) y el valor de su oferta.
-
----
-
-### `function showOffers() external view returns (Bider[] memory)`
-
-Devuelve la lista de todas las ofertas registradas con sus valores y oferentes.
-
----
-
-### `function endAuction() external`
-
-Finaliza manualmente la subasta antes de su tiempo límite.
-
-- Solo puede ejecutarse una vez.
-- Emite el evento `AuctionEnded`.
-
----
-
-### `function withdraw() external onlyAfterEnd`
-
-Permite a los **oferentes perdedores** retirar su depósito **con un descuento del 2%**.
-
-- El ganador no puede usar esta función.
-- Emite el evento `FullRefund`.
-
----
-
-### `function partialRefound() external auctionActive`
-
-Permite a un oferente retirar el exceso de ETH depositado **por encima de su última oferta válida** mientras la subasta sigue activa.
-
-- Emite el evento `PartialRefund`.
-
----
-
-## Variables Importantes
-
-| Variable | Tipo | Descripción |
-|----------|------|-------------|
-| `startTime` | `uint256` | Tiempo de inicio de la subasta. |
-| `stopTime` | `uint256` | Tiempo de finalización. |
-| `ended` | `bool` | Indica si fue finalizada manualmente. |
-| `winner` | `Bider` | Guarda al actual mayor postor. |
-| `allBids` | `Bider[]` | Lista de todas las ofertas realizadas. |
-| `deposits` | `mapping` | ETH depositado por cada oferente. |
-| `latestValidBid` | `mapping` | Última oferta válida por dirección. |
-
----
-
-## Eventos
-
-| Evento | Descripción |
-|--------|-------------|
-| `NewOffer(address indexed bidder, uint256 amount)` | Emitido cuando se hace una nueva oferta válida. |
-| `AuctionEnded(address winner, uint256 amount)` | Emitido cuando se termina la subasta. |
-| `PartialRefund(address indexed bidder, uint256 amount)` | Emitido cuando un usuario retira el exceso de fondos. |
-| `FullRefund(address indexed bidder, uint256 amount)` | Emitido cuando un perdedor retira su depósito (98%). |
-
-
+**Mateo Rios**  
+[@mateori0s](https://github.com/mateori0s)
